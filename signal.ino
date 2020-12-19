@@ -1,4 +1,6 @@
 #include <Adafruit_NeoPixel.h>
+#include <math.h>
+
 #ifdef __AVR__
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
@@ -25,6 +27,10 @@ void setup() {
   pixels.begin();
 }
 
+float easeOutQuart(float num) {
+  return 1 - pow(1 - num, 4);
+}
+
 void loop() {
   unsigned long now = millis();
   if (aniStartTime + aniDuration + 5000 < now) {
@@ -44,7 +50,7 @@ void loop() {
   } else if (now > aniStartTime + aniDuration) {
     newColor = aniTargetColor;
   } else {
-    newColor = (int) aniStartColor + ((aniTargetColor - aniStartColor) * ((now - aniStartTime) / aniDuration));
+    newColor = (int) aniStartColor + ((aniTargetColor - aniStartColor) * easeOutQuart((now - aniStartTime) / aniDuration));
   }
 
   if(newColor != aniCurrentColor) {
