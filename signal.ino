@@ -15,11 +15,35 @@
 // strandtest example for more information on possible values.
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-unsigned long aniStartTime = 0;
-float aniDuration = 1000;
-int aniStartColor;
-int aniTargetColor;
-int aniCurrentColor = 0;
+typedef struct {
+  unsigned char current;
+  unsigned char start;
+  unsigned char target;
+  unsigned long startTime;
+  unsigned int duration;
+} led;
+
+led h_red = {0,0,80,0, 300};
+
+led animate(led prev, unsigned char target, unsigned int duration, unsigned long startDelay) {
+  return {prev.current, prev.current, target, millis() + startDelay, duration};
+}
+
+float easeOutQuart(float num) {
+  return 1 - pow(1 - num, 4);
+}
+
+unsigned char animateStep(led px) {
+  unsigned long now = millis();
+
+  if (now < px.startTime) {
+    return px.start;
+  } else if (now > px.startTime + px.duration) {
+    return px.target;
+  } else {
+    return px.start + ((px.target - px.start) * easeOutQuart((now - px.startTime) / ((float) px.duration)));
+  }
+}
 
 void setup() {
   Serial.begin(9600);
@@ -27,37 +51,19 @@ void setup() {
   pixels.begin();
 }
 
-float easeOutQuart(float num) {
-  return 1 - pow(1 - num, 4);
-}
-
 void loop() {
-  unsigned long now = millis();
-  if (aniStartTime + aniDuration + 5000 < now) {
-    if (aniStartColor == 80) {
-      aniStartColor = 0;
-      aniTargetColor = 80;
+  if (h_red.startTime + h_red.duration + 5000 < millis()) {
+    if (h_red.target == 80) {
+      h_red = animate(h_red, 0, 500, 5000);
     } else {
-      aniStartColor = 80;
-      aniTargetColor = 0;
+      h_red = animate(h_red, 80, 300, 5000);
     }
-    aniStartTime = now + 5000;
   }
 
-  int newColor;
-  if (now < aniStartTime) {
-    newColor = aniStartColor;
-  } else if (now > aniStartTime + aniDuration) {
-    newColor = aniTargetColor;
-  } else {
-    newColor = (int) aniStartColor + ((aniTargetColor - aniStartColor) * easeOutQuart((now - aniStartTime) / aniDuration));
-  }
-
-  if(newColor != aniCurrentColor) {
-    aniCurrentColor = newColor;
-    if(newColor >= 0 && newColor < 256) {
-      pixels.setPixelColor(0, pixels.Color(newColor, 0, 0));
-    }
+  unsigned char newBrightness = animateStep(h_red);
+  if (newBrightness != h_red.current) {
+    h_red.current = newBrightness;
+    pixels.setPixelColor(0, pixels.Color(newBrightness, 0, 0));
 
     pixels.show();   // Send the updated pixel colors to the hardware.
   }
