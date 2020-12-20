@@ -32,7 +32,7 @@ led leds[NUMLEDS] = {
  {0, 0, 0, 0, 0},
  {0, 0, 255, 0, 300}
 };
-unsigned char state = 0;
+unsigned char hauptsignal = 0;
 unsigned long lastEvent = 0;
 
 led animate(led prev, unsigned char target, unsigned int duration, unsigned long startDelay) {
@@ -61,21 +61,51 @@ void setup() {
   pixels.begin();
 }
 
+void hp0() {
+  leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
+  leds[HGREEN] = animate(leds[HGREEN], 0, 300, 0);
+  leds[HRED] = animate(leds[HRED], 255, 300, 250);
+  hauptsignal = 0;
+}
+
+void hp1() {
+  int offset;
+
+  if (hauptsignal == 0) {
+    leds[HRED] = animate(leds[HRED], 0, 300, 0);
+    offset = 250;
+  } else {
+    leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
+    offset = 0;
+  }
+  leds[HGREEN] = animate(leds[HGREEN], 255, 300, offset);
+  hauptsignal = 1;
+}
+
+void hp2() {
+  int offset;
+
+  if (hauptsignal == 0) {
+    leds[HRED] = animate(leds[HRED], 0, 300, 0);
+    offset = 250;
+  } else {
+    offset = 0;
+  }
+  leds[HGREEN] = animate(leds[HGREEN], 255, 300, offset);
+  leds[HYELLOW] = animate(leds[HYELLOW], 255, 300, offset + 50);
+  hauptsignal = 2;
+}
+
 void loop() {
   if (lastEvent + 5000 < millis()) {
     lastEvent = millis();
-    if (state == 0) {
-      leds[HRED] = animate(leds[HRED], 0, 300, 0);
-      leds[HGREEN] = animate(leds[HGREEN], 255, 300, 250);
-      leds[HYELLOW] = animate(leds[HYELLOW], 255, 300, 300);
-      state = 1;
-    } else if (state == 1) {
-      leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
-      state = 2;
+    int next = random(3);
+    if (next == 0) {
+      hp0();
+    } else if (next == 1) {
+      hp1();
     } else {
-      leds[HGREEN] = animate(leds[HGREEN], 0, 300, 0);
-      leds[HRED] = animate(leds[HRED], 255, 300, 250);
-      state = 0;
+      hp2();
     }
   }
 
