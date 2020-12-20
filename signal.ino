@@ -6,8 +6,12 @@
 #endif
 
 #define PIN        6 // On Trinket or Gemma, suggest changing this to 1
-
 #define NUMPIXELS 4
+
+#define NUMLEDS 3
+#define HYELLOW 0
+#define HGREEN 1
+#define HRED 2
 
 // When setting up the NeoPixel library, we tell it how many pixels,
 // and which pin to use to send signals. Note that for older NeoPixel
@@ -23,7 +27,13 @@ typedef struct {
   unsigned int duration;
 } led;
 
-led h_red = {0,0,80,0, 300};
+led leds[NUMLEDS] = {
+ {0, 0, 0, 0, 0},
+ {0, 0, 0, 0, 0},
+ {0, 0, 255, 0, 300}
+};
+unsigned char state = 0;
+unsigned long lastEvent = 0;
 
 led animate(led prev, unsigned char target, unsigned int duration, unsigned long startDelay) {
   return {prev.current, prev.current, target, millis() + startDelay, duration};
@@ -52,19 +62,41 @@ void setup() {
 }
 
 void loop() {
-  if (h_red.startTime + h_red.duration + 5000 < millis()) {
-    if (h_red.target == 80) {
-      h_red = animate(h_red, 0, 500, 5000);
+  if (lastEvent + 5000 < millis()) {
+    lastEvent = millis();
+    if (state == 0) {
+      leds[HRED] = animate(leds[HRED], 0, 300, 0);
+      leds[HGREEN] = animate(leds[HGREEN], 255, 300, 250);
+      leds[HYELLOW] = animate(leds[HYELLOW], 255, 300, 300);
+      state = 1;
+    } else if (state == 1) {
+      leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
+      state = 2;
     } else {
-      h_red = animate(h_red, 80, 300, 5000);
+      leds[HGREEN] = animate(leds[HGREEN], 0, 300, 0);
+      leds[HRED] = animate(leds[HRED], 255, 300, 250);
+      state = 0;
     }
   }
 
-  unsigned char newBrightness = animateStep(h_red);
-  if (newBrightness != h_red.current) {
-    h_red.current = newBrightness;
-    pixels.setPixelColor(0, pixels.Color(newBrightness, 0, 0));
-
-    pixels.show();   // Send the updated pixel colors to the hardware.
+  for(int i = 0; i < 3; i++) {
+    leds[i].current = animateStep(leds[i]);
   }
+  for(int i = 0; i < ceil(NUMLEDS / 3.0); i++) {
+    unsigned char r, g, b;
+    r = leds[i * 3].current;
+    if (i * 3 + 1 < NUMLEDS) {
+      g = leds[i * 3 + 1].current;
+    } else {
+      g = 0;
+    }
+    if (i * 3 + 2 < NUMLEDS) {
+      b = leds[i * 3 + 2].current;
+    } else {
+      b = 0;
+    }
+    pixels.setPixelColor(i, pixels.Color(r, b, g));
+  }
+
+  pixels.show();
 }
