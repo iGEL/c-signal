@@ -13,6 +13,19 @@
 #define HGREEN 1
 #define HRED 2
 
+
+#define DEBOUNCE 200
+
+byte rows[] = {2, 3};
+const int rowCount = sizeof(rows)/sizeof(rows[0]);
+
+byte cols[] = {4, 5, 6};
+const int colCount = sizeof(cols)/sizeof(cols[0]);
+
+bool buttons[9];
+unsigned long lastChange = 0;
+
+
 // When setting up the NeoPixel library, we tell it how many pixels,
 // and which pin to use to send signals. Note that for older NeoPixel
 // strips you might need to change the third parameter -- see the
@@ -37,7 +50,6 @@ led leds[NUMLEDS] = {
  {0, 0, 0, 0, 0}
 };
 unsigned char hauptsignal = 0;
-unsigned long lastEvent = 0;
 
 led animate(led prev, unsigned char target, unsigned int duration, unsigned long startDelay) {
   return {prev.current, prev.current, target, millis() + startDelay, duration};
@@ -63,6 +75,13 @@ void setup() {
   Serial.begin(9600);
 
   pixels.begin();
+  for(int x=0; x<rowCount; x++) {
+    pinMode(rows[x], INPUT);
+  }
+
+  for (int x=0; x<colCount; x++) {
+    pinMode(cols[x], INPUT_PULLUP);
+  }
 }
 
 void hp0() {
@@ -100,17 +119,35 @@ void hp2() {
   hauptsignal = 2;
 }
 
-void loop() {
-  if (lastEvent + 5000 < millis()) {
-    lastEvent = millis();
-    int next = random(3);
-    if (next == 0) {
-      hp0();
-    } else if (next == 1) {
-      hp1();
-    } else {
-      hp2();
+void readMatrix() {
+  if (millis() > lastChange + DEBOUNCE) {
+    for(int colIdx = 0; colIdx < colCount; colIdx++) {
+      byte curCol = cols[colIdx];
+      pinMode(curCol, OUTPUT);
+      digitalWrite(curCol, LOW);
+
+      for(int rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        byte curRow = rows[rowIdx];
+        pinMode(curRow, INPUT_PULLUP);
+        byte buttonIdx = colIdx * rowCount + rowIdx;
+        buttons[buttonIdx] = !digitalRead(curRow);
+        pinMode(curRow, INPUT);
+      }
+      pinMode(curCol, INPUT);
+      lastChange = millis();
     }
+  }
+}
+
+void loop() {
+  readMatrix();
+
+  if (buttons[4] && hauptsignal != 0) {
+    hp0();
+  } else if (buttons[2] && hauptsignal != 1) {
+    hp1();
+  } else if (buttons[0] && hauptsignal != 2) {
+    hp2();
   }
 
   for(int i = 0; i < NUMLEDS; i++) {
