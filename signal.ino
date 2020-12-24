@@ -5,8 +5,8 @@
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 
-#define PIN        6 // On Trinket or Gemma, suggest changing this to 1
-#define NUMPIXELS 4
+#define PIN 7
+#define NUMPIXELS 3
 
 #define NUMLEDS 3
 #define HYELLOW 0
@@ -30,7 +30,11 @@ typedef struct {
 led leds[NUMLEDS] = {
  {0, 0, 0, 0, 0},
  {0, 0, 0, 0, 0},
- {0, 0, 255, 0, 300}
+ {0, 0, 255, 0, 300},
+ {0, 0, 0, 0, 0},
+ {0, 0, 0, 0, 0},
+ {0, 0, 0, 0, 0},
+ {0, 0, 0, 0, 0}
 };
 unsigned char hauptsignal = 0;
 unsigned long lastEvent = 0;
@@ -109,9 +113,10 @@ void loop() {
     }
   }
 
-  for(int i = 0; i < 3; i++) {
+  for(int i = 0; i < NUMLEDS; i++) {
     leds[i].current = animateStep(leds[i]);
   }
+
   for(int i = 0; i < ceil(NUMLEDS / 3.0); i++) {
     unsigned char r, g, b;
     r = leds[i * 3].current;
