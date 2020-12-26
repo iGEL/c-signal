@@ -8,13 +8,25 @@
 #define PIN 7
 #define NUMPIXELS 3
 
-#define NUMLEDS 3
+#define NUMLEDS 7
 #define HYELLOW 0
 #define HGREEN 1
 #define HRED 2
 
+#define VTGREEN 4
+#define VBGREEN 6
+#define VTYELLOW 5
+#define VBYELLOW 3
 
 #define DEBOUNCE 200
+
+typedef struct {
+  unsigned char current;
+  unsigned char start;
+  unsigned char target;
+  unsigned long startTime;
+  unsigned int duration;
+} led;
 
 byte rows[] = {2, 3};
 const int rowCount = sizeof(rows)/sizeof(rows[0]);
@@ -25,21 +37,6 @@ const int colCount = sizeof(cols)/sizeof(cols[0]);
 bool buttons[9];
 unsigned long lastChange = 0;
 
-
-// When setting up the NeoPixel library, we tell it how many pixels,
-// and which pin to use to send signals. Note that for older NeoPixel
-// strips you might need to change the third parameter -- see the
-// strandtest example for more information on possible values.
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-
-typedef struct {
-  unsigned char current;
-  unsigned char start;
-  unsigned char target;
-  unsigned long startTime;
-  unsigned int duration;
-} led;
-
 led leds[NUMLEDS] = {
  {0, 0, 0, 0, 0},
  {0, 0, 0, 0, 0},
@@ -49,10 +46,39 @@ led leds[NUMLEDS] = {
  {0, 0, 0, 0, 0},
  {0, 0, 0, 0, 0}
 };
+unsigned char vorsignal = 0;
 unsigned char hauptsignal = 0;
 
-led animate(led prev, unsigned char target, unsigned int duration, unsigned long startDelay) {
-  return {prev.current, prev.current, target, millis() + startDelay, duration};
+// When setting up the NeoPixel library, we tell it how many pixels,
+// and which pin to use to send signals. Note that for older NeoPixel
+// strips you might need to change the third parameter -- see the
+// strandtest example for more information on possible values.
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+void log(int i, unsigned char v) {
+  if(leds[i].current != v) {
+    if (i == HRED) {
+      Serial.print("HRED: ");
+    } else if (i == HGREEN) {
+      Serial.print("HGREEN: ");
+    } else if (i == HYELLOW) {
+      Serial.print("HYELLOW: ");
+    } else if (i == VTGREEN) {
+      Serial.print("VTGREEN: ");
+    } else if (i == VBGREEN) {
+      Serial.print("VBGREEN: ");
+    } else if (i == VTYELLOW) {
+      Serial.print("VTYELLOW: ");
+    } else if (i == VBYELLOW) {
+      Serial.print("VBYELLOW: ");
+    }
+    Serial.println(v);
+  }
+}
+
+void animate(int idx, unsigned char target, unsigned int duration, unsigned long startDelay) {
+  /* log(idx, target); */
+  leds[idx] = (led) {leds[idx].current, leds[idx].current, target, millis() + startDelay, duration};
 }
 
 float easeOutQuart(float num) {
@@ -85,9 +111,11 @@ void setup() {
 }
 
 void hp0() {
-  leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
-  leds[HGREEN] = animate(leds[HGREEN], 0, 300, 0);
-  leds[HRED] = animate(leds[HRED], 255, 300, 250);
+  int offset;
+  animate(HYELLOW, 0, 300, 0);
+  animate(HGREEN, 0, 300, 0);
+  animate(HRED, 255, 300, 250);
+  setVr(0);
   hauptsignal = 0;
 }
 
@@ -95,13 +123,14 @@ void hp1() {
   int offset;
 
   if (hauptsignal == 0) {
-    leds[HRED] = animate(leds[HRED], 0, 300, 0);
-    offset = 250;
+    setVr(1);
+    animate(HRED, 0, 300, 1000);
+    offset = 1250;
   } else {
-    leds[HYELLOW] = animate(leds[HYELLOW], 0, 300, 0);
+    animate(HYELLOW, 0, 300, 0);
     offset = 0;
   }
-  leds[HGREEN] = animate(leds[HGREEN], 255, 300, offset);
+  animate(HGREEN, 255, 300, offset);
   hauptsignal = 1;
 }
 
@@ -109,14 +138,55 @@ void hp2() {
   int offset;
 
   if (hauptsignal == 0) {
-    leds[HRED] = animate(leds[HRED], 0, 300, 0);
-    offset = 250;
+    setVr(2);
+    animate(HRED, 0, 300, 1000);
+    offset = 1250;
   } else {
     offset = 0;
   }
-  leds[HGREEN] = animate(leds[HGREEN], 255, 300, offset);
-  leds[HYELLOW] = animate(leds[HYELLOW], 255, 300, offset + 50);
+  animate(HGREEN, 255, 300, offset);
+  animate(HYELLOW, 255, 300, offset + 50);
   hauptsignal = 2;
+}
+
+void vrOff() {
+  animate(VTGREEN, 0, 300, 1300);
+  animate(VBGREEN, 0, 300, 1300);
+  animate(VTYELLOW, 0, 300, 1300);
+  animate(VBYELLOW, 0, 300, 1300);
+}
+
+void vr0() {
+  animate(VTGREEN, 0, 300, 0);
+  animate(VBGREEN, 0, 300, 240);
+  animate(VTYELLOW, 255, 300, 360);
+  animate(VBYELLOW, 255, 300, 600);
+}
+
+void vr1() {
+  animate(VTGREEN, 255, 300, 360);
+  animate(VBGREEN, 255, 300, 600);
+  animate(VTYELLOW, 0, 300, 0);
+  animate(VBYELLOW, 0, 300, 240);
+}
+
+void vr2() {
+  animate(VTGREEN, 255, 300, 360);
+  animate(VBGREEN, 0, 300, 240);
+  animate(VTYELLOW, 0, 300, 0);
+  animate(VBYELLOW, 255, 300, 600);
+}
+
+void setVr(int h) {
+  if (h == 0) {
+    vrOff();
+  } else if (vorsignal == 0) {
+    vr0();
+  } else if (vorsignal == 1) {
+    vr1();
+  } else if (vorsignal == 2) {
+    vr2();
+  }
 }
 
 void readMatrix() {
@@ -148,6 +218,15 @@ void loop() {
     hp1();
   } else if (buttons[0] && hauptsignal != 2) {
     hp2();
+  } else if (buttons[5] && vorsignal != 0) {
+    vorsignal = 0;
+    setVr(hauptsignal);
+  } else if (buttons[3] && vorsignal != 1) {
+    vorsignal = 1;
+    setVr(hauptsignal);
+  } else if (buttons[1] && vorsignal != 2) {
+    vorsignal = 2;
+    setVr(hauptsignal);
   }
 
   for(int i = 0; i < NUMLEDS; i++) {
